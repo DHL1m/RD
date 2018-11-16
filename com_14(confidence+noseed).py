@@ -2,28 +2,18 @@ from binary_14 import *
 import scipy.io
 # tf.set_random_seed(222)  #777
 import matplotlib.pyplot as plt
-# import tensorflow as tf
-# import numpy as np
-# from sklearn.metrics import confusion_matrix
+import tensorflow as tf
+import numpy as np
+from sklearn.metrics import confusion_matrix
+
 from tensorflow.examples.tutorials.mnist import input_data
 data = input_data.read_data_sets("./data", one_hot=True)
 data.test.cls = np.array([label.argmax() for label in data.test.labels])
 
-mytry='001'
-mycount=1
-# mybatch=1000,mylr=0.0001,myepochs=60,
+myinit=0; mybin=1; mystochastic=0; mybias=0; mydropout=1; myupdate=0; myminus=1; myvar=1; myclip=0; mystd=1; mywrite=1
 
-myinit=0
-mybin=1
-mystochastic=0
-mybias=0
-mydropout=1
-myupdate=0
-myminus=1
-myvar=1
-myclip=0
-mystd=1
-mywrite=1
+mytry='001'; mycount=1
+
 
 b={}
 for mybatch in (100,):  #100,50,25
