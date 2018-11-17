@@ -12,8 +12,13 @@ data.test.cls = np.array([label.argmax() for label in data.test.labels])
 
 myinit=0; mybin=1; mystochastic=0; mybias=0; mydropout=1; myupdate=0; myminus=1; myvar=1; myclip=0; mystd=1; mywrite=1
 
-mytry='001'; mycount=1
 
+#최종 원하는 폴더 및 파일명: E:/TF_storage/20181117/Drift/workingtest/
+#                         E:/TF_storage/20181117/Drift/work/
+#                                                             .....N번 반복해서 평균편차 이용.......01~??/
+#      event 파일(accuracy, histogram), accuracy, test output, test class, correctness, confusion matrix,
+mytry='001'; mycount=1
+storage
 
 b={}
 for mybatch in (100,):  #100,50,25
