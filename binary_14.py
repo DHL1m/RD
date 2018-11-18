@@ -7,7 +7,7 @@ import pandas as pd
 from tensorflow.contrib.tensorboard.plugins import projector
 # binary_2.py 에서 정확도의 차이와 관련되는 image 를 추출하는 과정을 추가함
 
-def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,mystochastic,mybias,mydropout,myupdate,myminus,myvar,myclip,mystd,mywrite):
+def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,mystochastic,mybias,mydropout,myupdate,myminus,myvar,myclip,mystd,mywrite,myfilename):
     tf.set_random_seed(3003)  # 777
     with tf.name_scope('Load_Data'):
         from tensorflow.examples.tutorials.mnist import input_data
@@ -101,8 +101,8 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         gradients = binary_backprop(loss, output, updates)  # gradients=optimizer.compute_gradients(loss)
         min_op = optimizer.apply_gradients(gradients, global_step=global_step)
 
-    myname = str(mytry)   # mybatch,mylr,myepochs,myinit,mybin,mystochastic,mybias,mydropout,myupdate,myminus,myvar,myclip,mystd,mywrite
-    myname += '_no(' + '%03d' % mycount + ')'
+    # myname = str(mytry)   # mybatch,mylr,myepochs,myinit,mybin,mystochastic,mybias,mydropout,myupdate,myminus,myvar,myclip,mystd,mywrite
+    myname = 'no(' + '%03d' % mycount + ')'
     myname += '_B['+ str(mybatch)
     myname += ']_LR[' + str(mylr)
     myname += ']_LR[' + str(mylr)
@@ -245,7 +245,7 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         # w_scalar222222 = tf.summary.scalar("L2(180,9)dvalue", dvaluecheck[1][180, 9])
         summary_op = tf.summary.merge_all() #var_batch100/test-1+/drift(0,6)1.001
 
-        Writer = tf.summary.FileWriter("E:/TF_TEST/20181114/002_confidence/"+myname)
+        Writer = tf.summary.FileWriter(mytry+myname)
         myaccuracy_train= tf.summary.scalar("Accuracy_Train", accuracy_train)
         myaccuracy_test = tf.summary.scalar("Accuracy_Test", accuracy_test)
 
@@ -333,13 +333,13 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
 
         print('Best Accuracy:',best_accuracy)
         print('Accuracy in test_set:', sess.run(accuracy, feed_dict=feed_dict))
-        conventional_2 = sess.run(tf.nn.softmax(output), feed_dict=feed_dict)
-        df = pd.DataFrame(conventional_2)
-        df.to_excel('conventional_2.xlsx', index=False, header=False)
+        soft_max_out = sess.run(tf.nn.softmax(output), feed_dict=feed_dict)
+        df = pd.DataFrame(soft_max_out)
+        df.to_excel(myfilename, index=False, header=False)
 
 
     #########################################################################
-
+        # Confusion matrix
 
         # Get the true classifications for the test-set.
         # cls_true = data.test.cls
@@ -374,10 +374,11 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
 
 
 ######################################################################################################
+        # Correctness
         cls_true = data.test.cls
         cls_pred = sess.run(tf.argmax(output, 1), feed_dict=feed_dict)
-        # correct_prediction = tf.equal(cls_pred, cls_true)
-        # correct = sess.run(correct_prediction, feed_dict=feed_dict)
+        correct_prediction = tf.equal(cls_pred, cls_true)
+        correct = sess.run(correct_prediction, feed_dict=feed_dict)
 
         # print(correct)
         # # Negate the boolean array.
@@ -407,7 +408,7 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
     Writer.close()
     tf.reset_default_graph()
     # return correct, cls_pred, total_cm
-
+    return cls_true, cls_pred
 
 
 

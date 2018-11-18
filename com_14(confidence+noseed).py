@@ -4,6 +4,7 @@ import scipy.io
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 from sklearn.metrics import confusion_matrix
 
 from tensorflow.examples.tutorials.mnist import input_data
@@ -17,29 +18,41 @@ myinit=0; mybin=1; mystochastic=0; mybias=0; mydropout=1; myupdate=0; myminus=1;
 #                         E:/TF_storage/20181117/Drift/work/
 #                                                             .....N번 반복해서 평균편차 이용.......01~??/
 #      event 파일(accuracy, histogram), accuracy, test output, test class, correctness, confusion matrix,
-mytry='001'; mycount=1
-storage
+folder="E:/TF_Confidence/20181117/001/"
+mycount=1
+mytry = folder+'%02d' % mycount + '/'
+for total_cycle in (1,):
 
-b={}
-for mybatch in (100,):  #100,50,25
-    for mylr in (0.001,):   #0.0001,0.001,0.00001
-        for myepochs in (50,):  #30,60
-            for mydvalue in (0.,):
-                for myt in (1,):
-                    # b['correct_TF_vector_' + str(mycount)], b['cls_pred_'+str(mycount)], b['total_cm_'+str(mycount)] = BinaryNet('49com_seed232_repeat02' + mytry + '_', mycount, mybatch, mylr,
-                    #                                          myepochs, myt, mydvalue, myinit, mybin, mystochastic,
-                    #                                          mybias, mydropout, myupdate, myminus, myvar, myclip, mystd,
-                    #                                          mywrite)
+    b={}
+    for mybatch in (100,):  #100,50,25
+        for mylr in (0.001,):   #0.0001,0.001,0.00001
+            for myepochs in (50,):  #30,60
+                count_drift=1
+                for mydvalue in (0., 1):
+                    if count_drift==1:
+                        myfilename = mytry + 'conv.xlsx'
+                    if count_drift==2:
+                        myfilename = mytry + 'conf.xlsx'
 
-                    BinaryNet('Output' + mytry + '_', mycount, mybatch, mylr,
-                                                             myepochs, myt, mydvalue, myinit, mybin, mystochastic,
-                                                             mybias, mydropout, myupdate, myminus, myvar, myclip, mystd, mywrite)
+                    for myt in (1,):
+                        # b['correct_TF_vector_' + str(mycount)], b['cls_pred_'+str(mycount)], b['total_cm_'+str(mycount)] = BinaryNet('49com_seed232_repeat02' + mytry + '_', mycount, mybatch, mylr,
+                        #                                          myepochs, myt, mydvalue, myinit, mybin, mystochastic,
+                        #                                          mybias, mydropout, myupdate, myminus, myvar, myclip, mystd,
+                        #                                          mywrite)
 
+                        cls_true, cls_pred = BinaryNet(mytry, mycount, mybatch, mylr,
+                                                                 myepochs, myt, mydvalue, myinit, mybin, mystochastic,
+                                                                 mybias, mydropout, myupdate, myminus, myvar, myclip, mystd, mywrite, myfilename)
 
+                        mycorrectness = [mytry + 'cls_true.xlsx', mytry + 'cls_pred.xlsx']
+                        dfa = pd.DataFrame(cls_true)
+                        dfa.to_excel(mycorrectness[0], index=False, header=False)
+                        dfb = pd.DataFrame(cls_pred)
+                        dfb.to_excel(mycorrectness[1], index=False, header=False)
 
-                    # BinaryNet('004',a01,a02,a03,a04,a05,a06,a07,a08,a09,a10,a11,a12,
-            #           a13,a14)
-                    mycount = mycount +1
+                        mycount = mycount +1
+                        mytry = folder + '%02d' % mycount + '/'
+                    count_drift=count_drift+1
 
 
 # dri0_morX
