@@ -18,15 +18,15 @@ myinit=0; mybin=1; mystochastic=0; mybias=0; mydropout=1; myupdate=0; myminus=1;
 #                         E:/TF_storage/20181117/Drift/work/
 #                                                             .....N번 반복해서 평균편차 이용.......01~??/
 #      event 파일(accuracy, histogram), accuracy, test output, test class, correctness, confusion matrix,
-folder="E:/TF_Confidence/20181117/003Adam/"
+folder="E:/TF_Confidence/20181117/004Adam_batch_LR/"
 mycount=1
 mytry = folder+'%02d' % mycount + '/'
 for total_cycle in (1,):
 
     b={}
-    for mybatch in (100,):  #100,50,25
-        for mylr in (0.001,):   #0.0001,0.001,0.00001
-            for myepochs in (51,):  #30,60
+    for mybatch in (25,):  #100,50,25
+        for mylr in (0.0001,):   #0.0001,0.001,0.00001
+            for myepochs in (60,):  #30,60
                 count_drift=1
                 for mydvalue in (0., 1):
                     if count_drift==1:
