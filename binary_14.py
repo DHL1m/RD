@@ -97,7 +97,7 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         accuracy = get_accuracy(output, y_true)
         # confusion = print_confusion_matrix(output, y_true)
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)  ##Adam
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  ##Adam ##GradientDescentOptimizer
         gradients = binary_backprop(loss, output, updates)  # gradients=optimizer.compute_gradients(loss)
         min_op = optimizer.apply_gradients(gradients, global_step=global_step)
 
