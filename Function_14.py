@@ -92,7 +92,7 @@ class Model():
         # return Wb
 
 
-    def makelayer(self, pre_Wfluc, pre_Wbin, input, num_outputs, uid, lastlayer):
+    def makelayer(self, pre_Wfluc, pre_Wbin, input, num_outputs, uid, lastlayer, learning_rate, time_warp):
         tf.set_random_seed(3003)
         np.random.seed(3003)
         batch_size, num_inputs = [dim.value for dim in input.get_shape()]
@@ -207,6 +207,7 @@ class Model():
             # 전체의 random 값을 generate.
             assign_drift=tf.cond(tf.equal(batch_num, 1), lambda: drift_value.assign(new_value),
                                       lambda: drift_value.assign(new_value*new_drift+drift_value*(1-new_drift)))
+
             # # 원래 값에 assign을 해주는데 new_drift가 1인 파트는 새로운 값으로, 0인 파트는 기존의 값으로 assign
             # 딱 첫번째 사이클에만 첫번째 조건문 실행하면되는데 매번 condition체크하는게 비효율적, 이걸 어떻게 바꿀 수 있을까
             with tf.control_dependencies([assign_drift]):
@@ -215,8 +216,17 @@ class Model():
                 if self.mode_dvalue==0:
                     drift_scale=tf.constant(0.)
                 else:
-                    drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
+                    if learning_rate==0:
+                        drift_scale = tf.cond(tf.equal(batch_num, 1),
+                                              lambda: tf.zeros(shape=[num_inputs, num_outputs], dtype=tf.float32),
+                                              lambda: tf.cast(drift_value * tf.log(drift_factor) / tf.log(
+                                                  tf.constant(time_warp, dtype=tf.float32)), dtype=tf.float32))
+                    else:
+                        drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
                                           lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32))
+                    # drift_scale = tf.cond(tf.greater(batch_num, 2500), lambda: tf.cast(drift_value*tf.log(drift_factor*100)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32), lambda: tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
+                    # #                       lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32)) )
+
             #여기가 0이 맞는지 확인필요
             #######################################################################################
             # drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.cast(1/time_scale, dtype=tf.float32),
@@ -262,12 +272,12 @@ class Model():
             output=tf.nn.dropout(tf.nn.relu(logit), keep_prob=self.keep_prob)
             return output, (output, input, W, Wbin, Wfluc)
 
-    def build_model(self):
+    def build_model(self, learning_rate, time_warp):
         updates = []
         hidden_layer = self.x
         for i, num_hidden in enumerate(self.layer_sizes):
             hidden_layer, update = self.makelayer(self.pre_Wfluc[i], self.pre_Wbin[i], hidden_layer, num_hidden, i,
-                                                  lastlayer=(i == len(self.layer_sizes) - 1))
+                                                  lastlayer=(i == len(self.layer_sizes) - 1),learning_rate=learning_rate, time_warp=time_warp)
             updates.append(update)
         output_layer = hidden_layer
         return output_layer, updates
@@ -334,7 +344,7 @@ def get_accuracy(hypothesis, y_true):
 #     plt.xlabel('Predicted')
 #     plt.ylabel('True')
 
-1
+
 
 def make_feeddict(updates=0,pre_Wbin=0,pre_Wfluc=0,feed_dict=0,save=0,mode=0):
     if mode==0:

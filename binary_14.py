@@ -49,7 +49,9 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
 ###################################################################################
 
     with tf.name_scope('Hyper_Parameters'):
-        learning_rate = mylr   #BEST=0.0001
+        # learning_rate = mylr   #BEST=0.0001
+        learning_rate = tf.get_variable(dtype=tf.float32,name="LR", shape=[], initializer=tf.zeros_initializer())
+        time_warp = tf.get_variable(dtype=tf.float32, name="TW", shape=[], initializer=tf.zeros_initializer())
         training_epochs = myepochs     #15  // 30, 60, 120
         batch_size = mybatch #100
         layer_sizes=[256,10]     #layer_sizes=[256,10]
@@ -92,12 +94,12 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
             pre_Wfluc.append(tf.placeholder(tf.float32, shape=[temp[i],temp[i+1]],name="pre_Wfluc"+str(i+1)))
 
     with tf.name_scope('Train_Structure'):
-        output, updates = Model(x,y_true,keep_prob,pre_Wbin,pre_Wfluc,layer_sizes,control,'DNN').build_model()
+        output, updates = Model(x,y_true,keep_prob,pre_Wbin,pre_Wfluc,layer_sizes,control,'DNN').build_model(learning_rate=learning_rate, time_warp=time_warp)
         loss = get_loss(output, y_true)
         accuracy = get_accuracy(output, y_true)
         # confusion = print_confusion_matrix(output, y_true)
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)  ##Adam ##GradientDescentOptimizer
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)  ##Adam ##GradientDescentOptimizer
         gradients = binary_backprop(loss, output, updates)  # gradients=optimizer.compute_gradients(loss)
         min_op = optimizer.apply_gradients(gradients, global_step=global_step)
 
@@ -142,8 +144,12 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         accuracy_test = tf.Variable(0.)
         dvaluecheck = tf.get_collection('mycheck2')
 
-        w_histogram5 = tf.summary.histogram("L1_W_hist", updates[0][2])
-        w_histogram6 = tf.summary.histogram("L2_W_hist", updates[1][2])
+        w_histogram1 = tf.summary.histogram("L1_W_hist", updates[0][2])
+        w_histogram2 = tf.summary.histogram("L2_W_hist", updates[1][2])
+        w_histogram3= tf.summary.histogram("L1_Wb_hist", updates[0][3])
+        w_histogram4 = tf.summary.histogram("L2_Wb_hist", updates[1][3])
+        w_histogram5 = tf.summary.histogram("L1_Wf_hist", updates[0][4])
+        w_histogram6 = tf.summary.histogram("L2_Wf_hist", updates[1][4])
         # for W
         # w_histogram01 = tf.summary.histogram("A00_L2_#4_W", updates[1][2][:, 4])
         # w_histogram02 = tf.summary.histogram("A00_L2_#9_W", updates[1][2][:, 9])
@@ -268,25 +274,33 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         total_cm = []
 
         for epoch in range(training_epochs):
+            sess.run(tf.assign(learning_rate,mylr))
+            sess.run(tf.assign(time_warp, 1))
+            if epoch > training_epochs-10:
+                sess.run(tf.assign(learning_rate, 0))
+                sess.run(tf.assign(time_warp,time_warp*0.1))
             avg_cost = 0
             if mode_test==1:
                 batchindex = np.arange(len(trainset))
                 np.random.shuffle(batchindex)
+            #######################################################################################################
             for i in range(total_batch):
-                if mode_test==0:   #General Input Data
-                    batch_xs, batch_ys = data.train.next_batch(batch_size,)
-                else:              #Test Input Data, e.g: 1 and 6,0 and 6
+                if mode_test == 0:  # General Input Data
+                    batch_xs, batch_ys = data.train.next_batch(batch_size, )
+                else:  # Test Input Data, e.g: 1 and 6,0 and 6
                     batch_xs = trainset[batchindex[i * batch_size:(i + 1) * batch_size]]
                     batch_ys = trainindex[batchindex[i * batch_size:(i + 1) * batch_size]]
-                #We need Weight series of pre-cycle and this cycle for every Training
-                feed_dict[x],feed_dict[y_true],feed_dict[keep_prob]=batch_xs,batch_ys,mode_dropout
-                temp2 = sess.run(make_feeddict(updates=updates,pre_Wbin=pre_Wbin,pre_Wfluc=pre_Wfluc,mode=1),feed_dict=feed_dict)
+                # We need Weight series of pre-cycle and this cycle for every Training
+                feed_dict[x], feed_dict[y_true], feed_dict[keep_prob] = batch_xs, batch_ys, mode_dropout
+                temp2 = sess.run(make_feeddict(updates=updates, pre_Wbin=pre_Wbin, pre_Wfluc=pre_Wfluc, mode=1),
+                                 feed_dict=feed_dict)
 
-                c, _ =sess.run([loss, min_op], feed_dict=feed_dict)
-                feed_dict = make_feeddict(updates,pre_Wbin,pre_Wfluc,feed_dict=feed_dict,save=temp2,mode=2)
+                c, _ = sess.run([loss, min_op], feed_dict=feed_dict)
+                feed_dict = make_feeddict(updates, pre_Wbin, pre_Wfluc, feed_dict=feed_dict, save=temp2, mode=2)
                 avg_cost += c / total_batch
-                if mode_write==1:
-                    Writer.add_summary(sess.run(summary_op,feed_dict=feed_dict),global_step=epoch*total_batch+i)       #global_step=epoch*total_batch+i+1
+                if mode_write == 1:
+                    Writer.add_summary(sess.run(summary_op, feed_dict=feed_dict),
+                                       global_step=epoch * total_batch + i)  # global_step=epoch*total_batch+i+1
                     # saver = tf.train.Saver()
                     # saver.save(sess, os.path.join("./logs/", "model.ckpt"), epoch)
                 """
@@ -298,33 +312,27 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
             # After finishing every epoch:
             # Stabilize Weight to evaluate:
             temp2 = sess.run(make_feeddict(updates=updates, pre_Wbin=pre_Wbin, pre_Wfluc=pre_Wfluc, mode=1),
-                            feed_dict=feed_dict)
-            feed_dict=make_feeddict(updates=updates, pre_Wbin=pre_Wbin, pre_Wfluc=pre_Wfluc, feed_dict=feed_dict, save=temp2, mode=2)
+                             feed_dict=feed_dict)
+            feed_dict = make_feeddict(updates=updates, pre_Wbin=pre_Wbin, pre_Wfluc=pre_Wfluc, feed_dict=feed_dict,
+                                      save=temp2, mode=2)
             # Evaluate in Train set
             feed_dict[x], feed_dict[y_true], feed_dict[keep_prob] = trainset, trainindex, 1
-            temp_val=sess.run(accuracy, feed_dict=feed_dict)
-            sess.run(tf.assign(accuracy_train,temp_val))
-            Writer.add_summary(sess.run(myaccuracy_train),global_step=epoch)
+            temp_val = sess.run(accuracy, feed_dict=feed_dict)
+            sess.run(tf.assign(accuracy_train, temp_val))
+            Writer.add_summary(sess.run(myaccuracy_train), global_step=epoch)
             # Evaluate in Test set
             feed_dict[x], feed_dict[y_true], feed_dict[keep_prob] = testset, testindex, 1
-            temp_val=sess.run(accuracy, feed_dict=feed_dict)
-            sess.run(tf.assign(accuracy_test,temp_val))
-            Writer.add_summary(sess.run(myaccuracy_test),global_step=epoch)
-            #We save best accuracy:
+            temp_val = sess.run(accuracy, feed_dict=feed_dict)
+            sess.run(tf.assign(accuracy_test, temp_val))
+            Writer.add_summary(sess.run(myaccuracy_test), global_step=epoch)
+            # We save best accuracy:
             if accuracy_train.eval() > best_accuracy:
                 best_accuracy = accuracy_train.eval()
             print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
-            print(' '*len('Epoch: 0000'),'Accuracy in train_set:', accuracy_train.eval())
+            print(' ' * len('Epoch: 0000'), 'Accuracy in train_set:', accuracy_train.eval())
             print('Accuracy in test_set:', sess.run(accuracy, feed_dict=feed_dict))
-
-
-            # print('Output:', sess.run(tf.nn.softmax(output), feed_dict=feed_dict))
-
-            # print(type(confidence))
-            # confidence =str(sess.run(tf.nn.softmax(output)), feed_dict=feed_dict)
-            # f.write("%s\n" % confidence)
-            # tf.write_file('confidence.txt', sess.run(tf.nn.softmax(output), feed_dict=feed_dict))
-
+            # After finishing every epoch:
+            # Stabilize Weight to evaluate:
             cls_true = data.test.cls
             cls_pred = sess.run(tf.argmax(output, 1), feed_dict=feed_dict)
             # cm = confusion_matrix(y_true=cls_true, y_pred=cls_pred)
