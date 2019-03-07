@@ -150,6 +150,10 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
         w_histogram4 = tf.summary.histogram("L2_Wb_hist", updates[1][3])
         w_histogram5 = tf.summary.histogram("L1_Wf_hist", updates[0][4])
         w_histogram6 = tf.summary.histogram("L2_Wf_hist", updates[1][4])
+        # w_histogram7 = tf.summary.histogram("L3_W_hist", updates[2][2])
+        # w_histogram8 = tf.summary.histogram("L3_Wb_hist", updates[2][3])
+        # w_histogram9 = tf.summary.histogram("L3_Wf_hist", updates[2][4])
+
         # for W
         # w_histogram01 = tf.summary.histogram("A00_L2_#4_W", updates[1][2][:, 4])
         # w_histogram02 = tf.summary.histogram("A00_L2_#9_W", updates[1][2][:, 9])
@@ -278,7 +282,7 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
             sess.run(tf.assign(time_warp, 1))
             if epoch > training_epochs-10:
                 sess.run(tf.assign(learning_rate, 0))
-                sess.run(tf.assign(time_warp,time_warp*0.1))
+                sess.run(tf.assign(time_warp,10))
             avg_cost = 0
             if mode_test==1:
                 batchindex = np.arange(len(trainset))

@@ -219,11 +219,10 @@ class Model():
                     if learning_rate==0:
                         drift_scale = tf.cond(tf.equal(batch_num, 1),
                                               lambda: tf.zeros(shape=[num_inputs, num_outputs], dtype=tf.float32),
-                                              lambda: tf.cast(drift_value * tf.log(drift_factor) / tf.log(
-                                                  tf.constant(time_warp, dtype=tf.float32)), dtype=tf.float32))
+                                              lambda: tf.cast(drift_value * tf.log(drift_factor) ))
                     else:
                         drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
-                                          lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32))
+                                          lambda: tf.cast(drift_value*time_warp*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32))
                     # drift_scale = tf.cond(tf.greater(batch_num, 2500), lambda: tf.cast(drift_value*tf.log(drift_factor*100)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32), lambda: tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
                     # #                       lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32)) )
 
