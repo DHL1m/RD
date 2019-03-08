@@ -18,7 +18,7 @@ myinit=0; mybin=1; mystochastic=0; mybias=0; mydropout=1; myupdate=0; myminus=1;
 #                         E:/TF_storage/20181117/Drift/work/
 #                                                             .....N번 반복해서 평균편차 이용.......01~??/
 #      event 파일(accuracy, histogram), accuracy, test output, test class, correctness, confusion matrix,
-folder="E:/TF_Confidence/20190306/004_test/21/"
+folder="E:/TF_Confidence/20190306/004_test/25/"
 mycount=1
 mytry = folder+'%02d' % mycount + '/'
 for total_cycle in (1,):

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 tf.set_random_seed(3003)
 class Model():
-    def __init__(self, x, y_true, keep_prob, pre_Wbin, pre_Wfluc, layer_sizes, control,name):
+    def __init__(self, x, y_true, keep_prob, pre_Wbin, pre_Wfluc, layer_sizes, control,batch_count,name):
         self.x = x
         self.y_true = y_true
         self.keep_prob = keep_prob
@@ -24,7 +24,7 @@ class Model():
         self.mode_std = control[9]
         self.mode_t = control[10]
         self.mode_dvalue = control[11]
-
+        self.batch_count=batch_count
         self.name = name
 
     def hard_sigmoid(self, x):
@@ -190,11 +190,16 @@ class Model():
             # Wfluc = tf.cast(tf.equal(pre_Wbin, 1), tf.float32)*keep_element*pre_Wfluc*1.0001+\
             #         tf.cast(tf.equal(pre_Wbin, -1), tf.float32)*keep_element*pre_Wfluc*1.00000\
             #         + tf.multiply(Wbin, update_element) + Wfluc_Reset+Wfluc_Set
-
-            batch_num = tf.Variable(1)
-            batch_num_float = tf.cast(batch_num, dtype=tf.float32)
+            batch_num = tf.get_variable(shape=Wbin.shape.as_list(),initializer=tf.initializers.ones(),name=W.op.name+"batch_num",dtype=tf.float32)
             # time_scale = tf.cast(self.mode_t, dtype=tf.float32)
-            drift_factor = (1 + batch_num_float) / batch_num_float
+
+            batch_num_update=tf.assign(batch_num,
+                                       tf.ones(shape=Wbin.shape.as_list())
+                                       +tf.cast(tf.equal(pre_Wbin, 1), tf.float32)*keep_element*(1+batch_num))
+            with tf.control_dependencies([batch_num_update]):
+                drift_factor = (1 + batch_num) / batch_num
+
+
             # drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.cast(tf.equal(batch_num, 1), dtype=tf.float32),
             #                       lambda: tf.cast(tf.pow((time_scale+(batch_num_float-1))/(time_scale+(batch_num_float - 2)), self.mode_dvalue),
             #                                       dtype=tf.float32))
@@ -205,7 +210,7 @@ class Model():
             new_value=tf.reshape(tf.contrib.distributions.Normal(loc=drift_Meanvalue, scale=drift_Stdvalue).sample(1),
                                     [num_inputs, num_outputs])
             # 전체의 random 값을 generate.
-            assign_drift=tf.cond(tf.equal(batch_num, 1), lambda: drift_value.assign(new_value),
+            assign_drift=tf.cond(tf.equal(self.batch_count,1), lambda: drift_value.assign(new_value),
                                       lambda: drift_value.assign(new_value*new_drift+drift_value*(1-new_drift)))
 
             # # 원래 값에 assign을 해주는데 new_drift가 1인 파트는 새로운 값으로, 0인 파트는 기존의 값으로 assign
@@ -217,12 +222,14 @@ class Model():
                     drift_scale=tf.constant(0.)
                 else:
                     if learning_rate==0:
-                        drift_scale = tf.cond(tf.equal(batch_num, 1),
+                        drift_scale = tf.cond(tf.equal(self.batch_count,1),
                                               lambda: tf.zeros(shape=[num_inputs, num_outputs], dtype=tf.float32),
-                                              lambda: tf.cast(drift_value * tf.log(drift_factor) ))
+                                              lambda: tf.cast(drift_value * tf.log(drift_factor) / tf.log(
+                                                  tf.constant(10, dtype=tf.float32)),
+                                                              dtype=tf.float32))
                     else:
-                        drift_scale = tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
-                                          lambda: tf.cast(drift_value*time_warp*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32))
+                        drift_scale = tf.cond(tf.equal(self.batch_count,1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
+                                          lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32))
                     # drift_scale = tf.cond(tf.greater(batch_num, 2500), lambda: tf.cast(drift_value*tf.log(drift_factor*100)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32), lambda: tf.cond(tf.equal(batch_num, 1), lambda: tf.zeros(shape=[num_inputs,num_outputs],dtype=tf.float32),
                     # #                       lambda: tf.cast(drift_value*tf.log(drift_factor)/tf.log(tf.constant(10, dtype=tf.float32)), dtype=tf.float32)) )
 
@@ -257,9 +264,9 @@ class Model():
             logit = tf.matmul(input, Wfluc) + b
         else:
             if self.mode_var == 1:
-                batch_count = tf.assign(batch_num, 1 + batch_num)
-                with tf.control_dependencies([batch_count]):
-                    logit = tf.matmul(input, Wfluc)
+                # batch_count_old = tf.assign(batch_num, 1 + batch_num)
+                # with tf.control_dependencies([batch_count_old]):
+                logit = tf.matmul(input, Wfluc)
             else:
                 if self.mode_bin == 1:
                     logit = tf.matmul(input, Wbin)

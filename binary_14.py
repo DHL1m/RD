@@ -94,7 +94,8 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
             pre_Wfluc.append(tf.placeholder(tf.float32, shape=[temp[i],temp[i+1]],name="pre_Wfluc"+str(i+1)))
 
     with tf.name_scope('Train_Structure'):
-        output, updates = Model(x,y_true,keep_prob,pre_Wbin,pre_Wfluc,layer_sizes,control,'DNN').build_model(learning_rate=learning_rate, time_warp=time_warp)
+        batch_count=tf.get_variable(name="batch_count",shape=[],initializer=tf.ones_initializer())
+        output, updates = Model(x,y_true,keep_prob,pre_Wbin,pre_Wfluc,layer_sizes,control,batch_count,'DNN').build_model(learning_rate=learning_rate, time_warp=time_warp)
         loss = get_loss(output, y_true)
         accuracy = get_accuracy(output, y_true)
         # confusion = print_confusion_matrix(output, y_true)
@@ -313,6 +314,8 @@ def BinaryNet(mytry,mycount, mybatch,mylr,myepochs,myt, mydvalue,myinit,mybin,my
                           sess.run(accuracy, feed_dict={x: trainset, y_true: trainindex, keep_prob: 1}))
                     print(' '*len("Cycle: 00000"),'cost =', '{:.9f}'.format(c))
                 """
+                if epoch==0 and i==0:
+                    sess.run(tf.assign(batch_count,0))
             # After finishing every epoch:
             # Stabilize Weight to evaluate:
             temp2 = sess.run(make_feeddict(updates=updates, pre_Wbin=pre_Wbin, pre_Wfluc=pre_Wfluc, mode=1),
